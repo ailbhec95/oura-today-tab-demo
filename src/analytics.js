@@ -12,12 +12,7 @@ export function initAnalytics() {
     return;
   }
 
-  amplitude.init(API_KEY, undefined, {
-    defaultTracking: {
-      sessions: true,
-      pageViews: false,
-    },
-  });
+  amplitude.init(API_KEY);
 
   initialized = true;
 }
