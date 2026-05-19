@@ -1,18 +1,19 @@
 import {
   initAnalytics,
   trackDemoViewed,
-  trackCardSelected,
-  trackCardAnalyzeClicked,
-  trackCardAnalysisStarted,
-  trackCardAnalysisCompleted,
+  trackTodayTabCardAnalysis,
+  trackTodayTabScrolled,
+  trackContextCardDwelling,
   trackShortcutTapped,
   trackTabTapped,
+  trackTodayTabEntered,
 } from './analytics.js';
+import { TodayTabSessionTracker } from './todaySession.js';
 
 const analyses = {
   sleep: {
     title: 'Excellent sleep last night',
-    subtitle: 'Sleep card · Analyzed just now',
+    subtitle: 'Sleep card · Session analysis',
     summary:
       "Last night's sleep was in your top 15% over the past 90 days. Deep sleep duration and low resting heart rate indicate strong parasympathetic recovery, which directly supports today's Readiness score of 82.",
     metrics: [
@@ -32,7 +33,7 @@ const analyses = {
   },
   activity: {
     title: 'Activity goal within reach',
-    subtitle: 'Activity card · Analyzed just now',
+    subtitle: 'Activity card · Session analysis',
     summary:
       "You're at 71% of your daily step goal by mid-morning, which is ahead of your typical Tuesday pace. Readiness is high, so adding a focused activity block this afternoon would be well-tolerated without compromising recovery.",
     metrics: [
@@ -52,7 +53,7 @@ const analyses = {
   },
   stress: {
     title: 'Daytime stress is low',
-    subtitle: 'Stress card · Analyzed just now',
+    subtitle: 'Stress card · Session analysis',
     summary:
       'Overall daytime stress load is in the "restored" zone. The commute-related peak at 9:30 AM was acute and short-lived — recovery within 45 minutes suggests healthy autonomic flexibility.',
     metrics: [
@@ -72,7 +73,7 @@ const analyses = {
   },
   heart: {
     title: 'HRV trending up',
-    subtitle: 'Heart health card · Analyzed just now',
+    subtitle: 'Heart health card · Session analysis',
     summary:
       'Overnight HRV of 42 ms is meaningfully above your 14-day rolling baseline (+8%). This trend, combined with strong sleep metrics, indicates improving cardiovascular recovery capacity.',
     metrics: [
@@ -90,6 +91,24 @@ const analyses = {
       'This is a good window for slightly higher training load if activity goals warrant it. Continue monitoring for 2–3 more days to confirm trend.',
     confidence: 86,
   },
+  daily_highlight: {
+    title: "Strong recovery — you're ready to perform",
+    subtitle: 'Daily highlight · Session analysis',
+    summary:
+      'Your daily highlight received meaningful attention this session. Sleep quality and HRV are above your 14-day baseline, supporting a high-readiness day.',
+    metrics: [
+      { label: 'Readiness', value: '82' },
+      { label: 'Sleep score', value: '88' },
+      { label: 'HRV trend', value: '+8% vs baseline' },
+    ],
+    insights: [
+      'Highlight aligned with top-performing metrics in your session',
+      'Consider moderate activity while readiness remains elevated',
+    ],
+    recommendation:
+      'Afternoon is an optimal window for training based on combined readiness signals.',
+    confidence: 89,
+  },
 };
 
 const cards = document.querySelectorAll('.card');
@@ -97,15 +116,47 @@ const panelTitle = document.getElementById('analysis-title');
 const panelSubtitle = document.getElementById('analysis-subtitle');
 const analysisEmpty = document.getElementById('analysis-empty');
 const analysisContent = document.getElementById('analysis-content');
+const appContent = document.querySelector('.app-content');
+const tabBar = document.querySelector('.tab-bar');
+const phoneScreen = document.querySelector('.phone');
 
-function renderAnalysis(key) {
-  const data = analyses[key];
-  if (!data) return;
+let activeTab = 'Today';
+const reportedDwellKeys = new Set();
 
-  cards.forEach((c) => c.classList.toggle('selected', c.dataset.card === key));
+const sessionTracker = new TodayTabSessionTracker({
+  scrollContainer: appContent,
+  cardSelector: '.card, .daily-highlight',
+});
+
+sessionTracker.onScrollDepth = (scrollProps) => {
+  trackTodayTabScrolled(scrollProps);
+};
+
+function renderSessionAnalysis(session) {
+  const primaryKey = session.primary_card_type ?? session.context_cards[0]?.card_type;
+  const data = analyses[primaryKey];
+
+  if (!data) {
+    panelTitle.textContent = 'Session complete';
+    panelSubtitle.textContent = `Left Today for ${session.exit_tab}`;
+    analysisEmpty.hidden = true;
+    analysisContent.hidden = false;
+    analysisContent.innerHTML = `
+      <div class="analysis-section">
+        <h4>Session summary</h4>
+        <p>Tracked ${session.cards_viewed_count} context cards over ${Math.round(session.session_duration_ms / 1000)}s with ${session.scroll_max_depth_pct}% max scroll depth.</p>
+      </div>
+    `;
+    return;
+  }
+
+  cards.forEach((c) => c.classList.toggle('selected', c.dataset.card === primaryKey));
+
+  const primaryCard = session.context_cards.find((c) => c.card_type === primaryKey);
+  const dwellSec = primaryCard ? (primaryCard.dwell_ms / 1000).toFixed(1) : '—';
 
   panelTitle.textContent = data.title;
-  panelSubtitle.textContent = data.subtitle;
+  panelSubtitle.textContent = `${data.subtitle} · Left for ${session.exit_tab}`;
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
 
@@ -113,6 +164,26 @@ function renderAnalysis(key) {
     <div class="analysis-section">
       <h4>Summary</h4>
       <p>${data.summary}</p>
+    </div>
+    <div class="analysis-section">
+      <h4>Session signals (Cart Analysis)</h4>
+      <div class="metric-chips">
+        <span class="metric-chip"><strong>Dwell:</strong> ${dwellSec}s on primary card</span>
+        <span class="metric-chip"><strong>Scroll depth:</strong> ${session.scroll_max_depth_pct}%</span>
+        <span class="metric-chip"><strong>Cards viewed:</strong> ${session.cards_viewed_count}</span>
+        <span class="metric-chip"><strong>Scroll events:</strong> ${session.scroll_event_count}</span>
+      </div>
+    </div>
+    <div class="analysis-section">
+      <h4>Context cards in session</h4>
+      <ul>
+        ${session.context_cards
+          .map(
+            (c) =>
+              `<li><strong>${c.card_title}</strong> — ${(c.dwell_ms / 1000).toFixed(1)}s dwell, ${c.max_visible_pct}% visible${c.was_tapped ? ', tapped' : ''}</li>`
+          )
+          .join('')}
+      </ul>
     </div>
     <div class="analysis-section">
       <h4>Contributing metrics</h4>
@@ -142,47 +213,80 @@ function renderAnalysis(key) {
     const fill = analysisContent.querySelector('.confidence-fill');
     if (fill) fill.style.width = `${data.confidence}%`;
   });
-
-  trackCardAnalysisCompleted(key, data.confidence);
 }
 
-function showLoading(key) {
-  cards.forEach((c) => c.classList.toggle('selected', c.dataset.card === key));
-  panelTitle.textContent = 'Analyzing…';
-  panelSubtitle.textContent = 'Processing card data';
+function showLoadingAnalysis() {
+  panelTitle.textContent = 'Analyzing session…';
+  panelSubtitle.textContent = 'Processing dwell & scroll from Today tab';
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
     <div class="analysis-section" style="text-align:center;padding:40px 0">
       <div class="loading-dots"><span></span><span></span><span></span></div>
-      <p style="margin-top:16px;color:var(--text-tertiary);font-size:14px">Extracting metrics and generating insights</p>
+      <p style="margin-top:16px;color:var(--text-tertiary);font-size:14px">Building Cart Analysis payload from context cards</p>
     </div>
   `;
 }
 
-function analyzeCard(key, source = 'card_click') {
-  trackCardAnalysisStarted(key);
-  if (source === 'analyze_button') {
-    trackCardAnalyzeClicked(key);
-  } else {
-    trackCardSelected(key, source);
+function leaveTodayTab(exitTab) {
+  showLoadingAnalysis();
+
+  const session = sessionTracker.flush(exitTab);
+  trackTodayTabCardAnalysis(session);
+
+  session.context_cards.forEach((card) => {
+    const key = `${card.card_type}:${card.dwell_ms}`;
+    if (card.dwell_ms >= 2000 && !reportedDwellKeys.has(key)) {
+      reportedDwellKeys.add(key);
+      trackContextCardDwelling({
+        card_type: card.card_type,
+        card_title: card.card_title,
+        dwell_ms: card.dwell_ms,
+        max_visible_pct: card.max_visible_pct,
+      });
+    }
+  });
+
+  setTimeout(() => renderSessionAnalysis(session), 900);
+}
+
+function switchTab(tabName) {
+  const fromTab = activeTab;
+  if (tabName === fromTab) return;
+
+  tabBar.querySelectorAll('.tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+
+  if (fromTab === 'Today' && tabName !== 'Today') {
+    leaveTodayTab(tabName);
+    phoneScreen?.classList.add('tab-away-from-today');
   }
-  showLoading(key);
-  setTimeout(() => renderAnalysis(key), 900);
+
+  if (tabName === 'Today') {
+    phoneScreen?.classList.remove('tab-away-from-today');
+    sessionTracker.reset();
+    trackTodayTabEntered();
+    resetAnalysisPanel();
+  }
+
+  activeTab = tabName;
+  trackTabTapped(tabName, fromTab);
+}
+
+function resetAnalysisPanel() {
+  cards.forEach((c) => c.classList.remove('selected'));
+  panelTitle.textContent = 'Browse the Today tab';
+  panelSubtitle.textContent = 'Card analysis runs when you leave Today';
+  analysisEmpty.hidden = false;
+  analysisContent.hidden = true;
 }
 
 function bindInteractions() {
   cards.forEach((card) => {
-    const key = card.dataset.card;
-
-    card.addEventListener('click', (e) => {
-      if (e.target.classList.contains('analyze-btn')) return;
-      analyzeCard(key, 'card_click');
-    });
-
-    card.querySelector('.analyze-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      analyzeCard(key, 'analyze_button');
+    card.addEventListener('click', () => {
+      sessionTracker.recordCardTap(card);
+      cards.forEach((c) => c.classList.toggle('selected', c === card));
     });
   });
 
@@ -194,17 +298,14 @@ function bindInteractions() {
     });
   });
 
-  document.querySelectorAll('.tab-bar .tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.textContent?.trim() ?? 'unknown';
-      trackTabTapped(tabName);
-    });
+  tabBar.querySelectorAll('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 }
 
 initAnalytics();
 trackDemoViewed();
+sessionTracker.start();
+trackTodayTabEntered();
 bindInteractions();
-
-// Auto-demo: analyze sleep card on load
-setTimeout(() => analyzeCard('sleep', 'auto_demo'), 1200);
+resetAnalysisPanel();
