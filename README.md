@@ -11,6 +11,12 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+## Live demo
+
+**https://ailbhec95.github.io/oura-today-tab-demo/**
+
+Deployed automatically from `main` via GitHub Pages.
+
 ## Amplitude events
 
 | Event | When |
