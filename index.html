@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Oura — Today</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --surface: #1a1a1e;
+      --surface-elevated: #242428;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f5f5f7;
+      --text-secondary: rgba(245, 245, 247, 0.55);
+      --text-tertiary: rgba(245, 245, 247, 0.35);
+      --accent-readiness: #5eb8a8;
+      --accent-sleep: #7b8fd4;
+      --accent-activity: #e8a54b;
+      --accent-stress: #c97b8a;
+      --accent-highlight: #6ec4b8;
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --phone-w: 390px;
+      --phone-h: 844px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(145deg, #1a1a22 0%, #0a0a0c 50%, #12141a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .demo-layout {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+      max-width: 1100px;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .demo-label {
+      position: absolute;
+      top: -32px;
+      left: 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    .phone-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .phone {
+      width: var(--phone-w);
+      height: var(--phone-h);
+      background: var(--bg);
+      border-radius: 44px;
+      border: 3px solid #2a2a30;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.05),
+        0 40px 80px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .status-icons svg {
+      opacity: 0.9;
+    }
+
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 20px 0;
+      scrollbar-width: none;
+    }
+
+    .app-content::-webkit-scrollbar {
+      display: none;
+    }
+
+    .today-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-top: 4px;
+    }
+
+    .today-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .today-header .date {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .ring-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .ring-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-readiness);
+    }
+
+    /* Score shortcuts */
+    .shortcuts {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 24px;
+      scrollbar-width: none;
+    }
+
+    .shortcuts::-webkit-scrollbar {
+      display: none;
+    }
+
+    .shortcut {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .shortcut-ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: var(--surface);
+    }
+
+    .shortcut-ring svg.score-ring {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .shortcut-ring .score-num {
+      font-size: 20px;
+      font-weight: 700;
+      z-index: 1;
+    }
+
+    .shortcut-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Daily highlight */
+    .daily-highlight {
+      background: linear-gradient(135deg, rgba(94, 184, 168, 0.15) 0%, rgba(110, 196, 184, 0.05) 100%);
+      border: 1px solid rgba(94, 184, 168, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .daily-highlight .tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-highlight);
+      margin-bottom: 8px;
+    }
+
+    .daily-highlight h2 {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .daily-highlight p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    /* Cards */
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .card.selected {
+      border-color: var(--accent-highlight);
+      box-shadow: 0 0 0 1px rgba(110, 196, 184, 0.3);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-icon.sleep { background: rgba(123, 143, 212, 0.2); color: var(--accent-sleep); }
+    .card-icon.activity { background: rgba(232, 165, 75, 0.2); color: var(--accent-activity); }
+    .card-icon.stress { background: rgba(201, 123, 138, 0.2); color: var(--accent-stress); }
+    .card-icon.heart { background: rgba(94, 184, 168, 0.2); color: var(--accent-readiness); }
+
+    .card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-body h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .card-body p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .card-time {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .analyze-btn {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-highlight);
+      background: rgba(110, 196, 184, 0.12);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+
+    .analyze-btn:hover {
+      background: rgba(110, 196, 184, 0.22);
+    }
+
+    /* Timeline */
+    .timeline {
+      margin-bottom: 100px;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      position: relative;
+    }
+
+    .timeline-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 28px;
+      bottom: -10px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .timeline-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 2px solid var(--text-tertiary);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .timeline-item.active .timeline-dot {
+      border-color: var(--accent-highlight);
+      background: var(--accent-highlight);
+    }
+
+    .timeline-content .time {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 2px;
+    }
+
+    .timeline-content .label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Tab bar */
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(13, 13, 15, 0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0 28px;
+    }
+
+    .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      cursor: pointer;
+    }
+
+    .tab.active {
+      color: var(--text);
+    }
+
+    .tab svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Analysis panel */
+    .analysis-panel {
+      flex: 1;
+      min-width: 320px;
+      max-width: 420px;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: var(--phone-h);
+    }
+
+    .analysis-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .analysis-header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-highlight);
+      background: rgba(110, 196, 184, 0.12);
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .analysis-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .analysis-header .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .analysis-body {
+      padding: 20px 24px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .analysis-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-tertiary);
+    }
+
+    .analysis-empty svg {
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .analysis-empty p {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .analysis-section {
+      margin-bottom: 20px;
+    }
+
+    .analysis-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .analysis-section h4 {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .analysis-section p,
+    .analysis-section li {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .analysis-section ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .analysis-section li {
+      padding: 8px 0;
+      padding-left: 16px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .analysis-section li:last-child {
+      border-bottom: none;
+    }
+
+    .analysis-section li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 16px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent-highlight);
+    }
+
+    .metric-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .metric-chip {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: var(--surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .metric-chip strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .confidence-bar {
+      height: 4px;
+      background: var(--surface-elevated);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-highlight), var(--accent-readiness));
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .confidence-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 6px;
+    }
+
+    .loading-dots {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .loading-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-highlight);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    .home-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 134px;
+      height: 5px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 3px;
+      z-index: 10;
+    }
+
+    @media (max-width: 900px) {
+      .demo-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .analysis-panel {
+        max-width: var(--phone-w);
+        width: 100%;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-layout">
+    <div class="phone-wrap">
+      <span class="demo-label">Today tab</span>
+      <div class="phone">
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="status-icons">
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="0.5"/><rect x="5" y="2" width="3" height="10" rx="0.5"/><rect x="10" y="0" width="3" height="12" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.3"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.4C10.4 2.4 12.5 3.4 14 5L15.5 3.5C13.6 1.4 10.9 0 8 0S2.4 1.4 0.5 3.5L2 5C3.5 3.4 5.6 2.4 8 2.4ZM8 6.4C9.3 6.4 10.5 7 11.4 8L12.9 6.5C11.5 5.1 9.8 4.2 8 4.2S4.5 5.1 3.1 6.5L4.6 8C5.5 7 6.7 6.4 8 6.4ZM8 10.4C8.6 10.4 9.1 10.1 9.5 9.7L8 8.2L6.5 9.7C6.9 10.1 7.4 10.4 8 10.4Z"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="21" height="10" rx="2" stroke="currentColor" stroke-width="1" fill="none" opacity="0.35"/><rect x="1.5" y="2.5" width="16" height="7" rx="1" fill="currentColor"/><path d="M23 4.5V7.5C23.8 7.2 24.5 6.5 24.5 6S23.8 4.8 23 4.5Z" fill="currentColor" opacity="0.4"/></svg>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <header class="today-header">
+            <div>
+              <h1>Today</h1>
+              <p class="date">Tuesday, May 19</p>
+            </div>
+            <div class="ring-status">
+              <span class="ring-dot"></span>
+              78%
+            </div>
+          </header>
+
+          <div class="shortcuts">
+            <div class="shortcut">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#5eb8a8" stroke-width="4" stroke-dasharray="141 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-readiness)">82</span>
+              </div>
+              <span class="shortcut-label">Readiness</span>
+            </div>
+            <div class="shortcut">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#7b8fd4" stroke-width="4" stroke-dasharray="155 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-sleep)">88</span>
+              </div>
+              <span class="shortcut-label">Sleep</span>
+            </div>
+            <div class="shortcut">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#e8a54b" stroke-width="4" stroke-dasharray="106 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-activity)">62</span>
+              </div>
+              <span class="shortcut-label">Activity</span>
+            </div>
+            <div class="shortcut">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#c97b8a" stroke-width="4" stroke-dasharray="88 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-stress)">Restored</span>
+              </div>
+              <span class="shortcut-label">Stress</span>
+            </div>
+          </div>
+
+          <section class="daily-highlight">
+            <p class="tag">Your day</p>
+            <h2>Strong recovery — you're ready to perform</h2>
+            <p>Sleep quality and HRV are above your 14-day baseline. Consider a moderate workout this afternoon while energy is high.</p>
+          </section>
+
+          <p class="section-label">Updates</p>
+          <div class="cards" id="cards">
+            <article class="card" data-card="sleep" tabindex="0">
+              <div class="card-top">
+                <div class="card-icon sleep">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </div>
+                <div class="card-body">
+                  <h3>Excellent sleep last night</h3>
+                  <p>7h 42m total · 2h 18m deep sleep · Resting HR 52 bpm</p>
+                </div>
+              </div>
+              <div class="card-meta">
+                <span class="card-time">This morning · 6:48 AM</span>
+                <button class="analyze-btn" type="button">Analyze</button>
+              </div>
+            </article>
+
+            <article class="card" data-card="activity" tabindex="0">
+              <div class="card-top">
+                <div class="card-icon activity">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <div class="card-body">
+                  <h3>Activity goal within reach</h3>
+                  <p>4,280 of 6,000 steps · 320 active calories burned so far</p>
+                </div>
+              </div>
+              <div class="card-meta">
+                <span class="card-time">Updated · 9:15 AM</span>
+                <button class="analyze-btn" type="button">Analyze</button>
+              </div>
+            </article>
+
+            <article class="card" data-card="stress" tabindex="0">
+              <div class="card-top">
+                <div class="card-icon stress">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </div>
+                <div class="card-body">
+                  <h3>Daytime stress is low</h3>
+                  <p>Stress load peaked at 9:30 AM during your commute, then recovered quickly</p>
+                </div>
+              </div>
+              <div class="card-meta">
+                <span class="card-time">Last hour</span>
+                <button class="analyze-btn" type="button">Analyze</button>
+              </div>
+            </article>
+
+            <article class="card" data-card="heart" tabindex="0">
+              <div class="card-top">
+                <div class="card-icon heart">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <div class="card-body">
+                  <h3>HRV trending up</h3>
+                  <p>42 ms average overnight — 8% above your personal baseline</p>
+                </div>
+              </div>
+              <div class="card-meta">
+                <span class="card-time">Overnight</span>
+                <button class="analyze-btn" type="button">Analyze</button>
+              </div>
+            </article>
+          </div>
+
+          <section class="timeline">
+            <p class="section-label">Timeline</p>
+            <div class="timeline-item active">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <p class="time">6:48 AM</p>
+                <p class="label">Woke up · Sleep score 88</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <p class="time">8:12 AM</p>
+                <p class="label">Morning walk · 1,240 steps</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <p class="time">9:30 AM</p>
+                <p class="label">Stress peak · Commute detected</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <nav class="tab-bar">
+          <div class="tab active">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+            Today
+          </div>
+          <div class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Vitals
+          </div>
+          <div class="tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg>
+            My Health
+          </div>
+        </nav>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+
+    <div class="analysis-panel" id="analysis-panel">
+      <div class="analysis-header">
+        <span class="badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Card analysis
+        </span>
+        <h2 id="analysis-title">Select a card</h2>
+        <p class="subtitle" id="analysis-subtitle">Tap any update card or Analyze to see AI-powered insights</p>
+      </div>
+      <div class="analysis-body" id="analysis-body">
+        <div class="analysis-empty" id="analysis-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+          <p>Choose a Today tab card to generate a structured analysis with summary, contributing metrics, and recommendations.</p>
+        </div>
+        <div id="analysis-content" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

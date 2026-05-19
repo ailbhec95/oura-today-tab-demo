@@ -1,0 +1,18 @@
+{
+  "name": "oura-today-tab-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Oura Today tab demo with card analysis and Amplitude analytics",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@amplitude/analytics-browser": "0.2.4"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
