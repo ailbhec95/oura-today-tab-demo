@@ -22,7 +22,7 @@ export function initAnalytics() {
  *
  * amplitude.logEvent('Event Name', {
  *   context_cards: [
- *     { name: 'Sleep', viewed: 'viewed', analysed: 'not analysed' },
+ *     { card_id: 1, card_name: 'Sleep', viewed: 'viewed', analysed: 'not analysed' },
  *   ],
  * });
  */

@@ -7,19 +7,21 @@ const appContent = document.querySelector('.app-content');
 const shortcutsEl = document.querySelector('.shortcuts');
 const analysisTitle = document.getElementById('analysis-title');
 const analysisSubtitle = document.getElementById('analysis-subtitle');
+const analysisEmpty = document.getElementById('analysis-empty');
+const analysisContent = document.getElementById('analysis-content');
 
 const SCROLL_STOP_DEBOUNCE_MS = 700;
 const VISIBLE_RATIO_THRESHOLD = 0.25;
 
 const TRACKED_ITEMS = [
-  { name: 'Sleep', selectors: ['[data-card="sleep"]', '[data-feature="sleep"]'] },
-  { name: 'Activity', selectors: ['[data-card="activity"]', '[data-feature="activity"]'] },
-  { name: 'Daytime Stress', selectors: ['[data-card="stress"]', '[data-feature="daytime-stress"]'] },
-  { name: 'Resilience', selectors: ['[data-feature="resilience"]'] },
-  { name: 'Cycle Insights', selectors: ['[data-feature="cycle-insights"]'] },
-  { name: 'Heart Rate', selectors: ['[data-feature="heart-rate"]', '[data-card="heart"]'] },
-  { name: 'Readiness', selectors: ['[data-feature="readiness"]'] },
-  { name: 'Timeline', selectors: ['.timeline'] },
+  { id: 1, name: 'Sleep', selectors: ['[data-card="sleep"]', '[data-feature="sleep"]'] },
+  { id: 2, name: 'Activity', selectors: ['[data-card="activity"]', '[data-feature="activity"]'] },
+  { id: 3, name: 'Daytime Stress', selectors: ['[data-card="stress"]', '[data-feature="daytime-stress"]'] },
+  { id: 4, name: 'Resilience', selectors: ['[data-feature="resilience"]'] },
+  { id: 5, name: 'Cycle Insights', selectors: ['[data-feature="cycle-insights"]'] },
+  { id: 6, name: 'Heart Rate', selectors: ['[data-feature="heart-rate"]', '[data-card="heart"]'] },
+  { id: 7, name: 'Readiness', selectors: ['[data-feature="readiness"]'] },
+  { id: 8, name: 'Timeline', selectors: ['.timeline'] },
 ];
 
 const statusMap = Object.fromEntries(
@@ -102,7 +104,8 @@ function getCurrentScrollDepthPct() {
 function buildCartObjectArray() {
   return {
     context_cards: TRACKED_ITEMS.map((item) => ({
-      name: item.name,
+      card_id: item.id,
+      card_name: item.name,
       viewed: statusMap[item.name].viewed ? 'viewed' : 'not viewed',
       analysed: statusMap[item.name].analysed ? 'analysed' : 'not analysed',
     })),
@@ -110,15 +113,34 @@ function buildCartObjectArray() {
   };
 }
 
+function showLastPayload(payload) {
+  if (!analysisEmpty || !analysisContent) return;
+
+  analysisTitle.textContent = 'Cart payload sent';
+  analysisSubtitle.textContent = 'Full event properties object (not just the array)';
+  analysisEmpty.hidden = true;
+  analysisContent.hidden = false;
+  analysisContent.innerHTML = `
+    <div class="analysis-section">
+      <h4>Event sent to Amplitude</h4>
+      <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px;">
+        Today Tab Cart Analysis Scroll Stopped
+      </p>
+      <pre style="font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);background:var(--surface-elevated);padding:12px;border-radius:8px;border:1px solid var(--border);">${JSON.stringify(payload, null, 2)}</pre>
+    </div>
+    <div class="analysis-section">
+      <h4>Child properties in charts</h4>
+      <p>After property splitting in Amplitude Data, use <strong>context_cards {:}.card_name</strong>, <strong>context_cards {:}.viewed</strong>, and <strong>context_cards {:}.analysed</strong> in Event Segmentation.</p>
+    </div>
+  `;
+}
+
 function emitScrollStoppedEvent() {
   refreshViewedState();
 
-  trackTodayTabCartAnalysisScrollStopped(buildCartObjectArray());
-
-  if (analysisTitle) analysisTitle.textContent = 'Scroll snapshot sent';
-  if (analysisSubtitle) {
-    analysisSubtitle.textContent = `Depth ${maxScrollDepthPct}% with Cart Analysis payload`;
-  }
+  const payload = buildCartObjectArray();
+  trackTodayTabCartAnalysisScrollStopped(payload);
+  showLastPayload(payload);
 }
 
 function scheduleScrollStoppedEvent() {
