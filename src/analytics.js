@@ -21,8 +21,8 @@ export function initAnalytics() {
  * @see https://amplitude.com/docs/analytics/charts/cart-analysis
  *
  * amplitude.logEvent('Event Name', {
- *   context_cards: [
- *     { card_id: 1, card_name: 'Sleep', viewed: 'viewed', analysed: 'not analysed' },
+ *   today_tab_cards: [
+ *     { card_id: 1, card_name: 'Sleep', is_viewed: true, is_analysed: false },
  *   ],
  * });
  */

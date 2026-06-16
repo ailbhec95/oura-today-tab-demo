@@ -103,13 +103,13 @@ function getCurrentScrollDepthPct() {
 
 function buildCartObjectArray() {
   return {
-    context_cards: TRACKED_ITEMS.map((item) => ({
-      card_id: item.id,
-      card_name: item.name,
-      viewed: statusMap[item.name].viewed ? 'viewed' : 'not viewed',
-      analysed: statusMap[item.name].analysed ? 'analysed' : 'not analysed',
+    today_tab_cards: TRACKED_ITEMS.map((item) => ({
+      card_id: Number(item.id),
+      card_name: String(item.name),
+      is_viewed: Boolean(statusMap[item.name].viewed),
+      is_analysed: Boolean(statusMap[item.name].analysed),
     })),
-    scroll_depth_pct: maxScrollDepthPct,
+    scroll_depth_pct: Number(maxScrollDepthPct),
   };
 }
 
@@ -130,7 +130,7 @@ function showLastPayload(payload) {
     </div>
     <div class="analysis-section">
       <h4>Child properties in charts</h4>
-      <p>After property splitting in Amplitude Data, use <strong>context_cards {:}.card_name</strong>, <strong>context_cards {:}.viewed</strong>, and <strong>context_cards {:}.analysed</strong> in Event Segmentation.</p>
+      <p>After property splitting in Amplitude Data, use <strong>today_tab_cards {:}.card_name</strong>, <strong>today_tab_cards {:}.is_viewed</strong>, and <strong>today_tab_cards {:}.is_analysed</strong> in Event Segmentation.</p>
     </div>
   `;
 }
