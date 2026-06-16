@@ -667,33 +667,54 @@
           </header>
 
           <div class="shortcuts">
-            <div class="shortcut">
+            <div class="shortcut" data-feature="readiness">
               <div class="shortcut-ring">
                 <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#5eb8a8" stroke-width="4" stroke-dasharray="141 176" stroke-linecap="round"/></svg>
                 <span class="score-num" style="color: var(--accent-readiness)">82</span>
               </div>
               <span class="shortcut-label">Readiness</span>
             </div>
-            <div class="shortcut">
+            <div class="shortcut" data-feature="sleep">
               <div class="shortcut-ring">
                 <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#7b8fd4" stroke-width="4" stroke-dasharray="155 176" stroke-linecap="round"/></svg>
                 <span class="score-num" style="color: var(--accent-sleep)">88</span>
               </div>
               <span class="shortcut-label">Sleep</span>
             </div>
-            <div class="shortcut">
+            <div class="shortcut" data-feature="activity">
               <div class="shortcut-ring">
                 <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#e8a54b" stroke-width="4" stroke-dasharray="106 176" stroke-linecap="round"/></svg>
                 <span class="score-num" style="color: var(--accent-activity)">62</span>
               </div>
               <span class="shortcut-label">Activity</span>
             </div>
-            <div class="shortcut">
+            <div class="shortcut" data-feature="daytime-stress">
               <div class="shortcut-ring">
                 <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#c97b8a" stroke-width="4" stroke-dasharray="88 176" stroke-linecap="round"/></svg>
                 <span class="score-num" style="color: var(--accent-stress)">Restored</span>
               </div>
-              <span class="shortcut-label">Stress</span>
+              <span class="shortcut-label">Daytime Stress</span>
+            </div>
+            <div class="shortcut" data-feature="heart-rate">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#5eb8a8" stroke-width="4" stroke-dasharray="132 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-readiness)">58</span>
+              </div>
+              <span class="shortcut-label">Heart Rate</span>
+            </div>
+            <div class="shortcut" data-feature="cycle-insights">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#7b8fd4" stroke-width="4" stroke-dasharray="119 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-sleep)">On</span>
+              </div>
+              <span class="shortcut-label">Cycle Insights</span>
+            </div>
+            <div class="shortcut" data-feature="resilience">
+              <div class="shortcut-ring">
+                <svg class="score-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="#e8a54b" stroke-width="4" stroke-dasharray="124 176" stroke-linecap="round"/></svg>
+                <span class="score-num" style="color: var(--accent-activity)">Stable</span>
+              </div>
+              <span class="shortcut-label">Resilience</span>
             </div>
           </div>
 
@@ -820,13 +841,13 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           Card analysis
         </span>
-        <h2 id="analysis-title">Browse the Today tab</h2>
-        <p class="subtitle" id="analysis-subtitle">Card analysis runs when you leave Today (Cart Analysis)</p>
+        <h2 id="analysis-title">Scroll the Today tab</h2>
+        <p class="subtitle" id="analysis-subtitle">One Cart Analysis event fires when scrolling stops</p>
       </div>
       <div class="analysis-body" id="analysis-body">
         <div class="analysis-empty" id="analysis-empty">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
-          <p>Scroll the Today tab and dwell on context cards. When you switch to Vitals or My Health, session analysis fires with dwell and scroll data for Amplitude Cart Analysis.</p>
+          <p>After you stop scrolling, a single Cart Analysis event is sent with scroll depth and viewed/analysed status for each requested card context.</p>
         </div>
         <div id="analysis-content" hidden></div>
       </div>
