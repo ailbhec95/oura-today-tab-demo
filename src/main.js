@@ -101,10 +101,24 @@ function getCurrentScrollDepthPct() {
 
 function buildContextCardsPayload() {
   return TRACKED_ITEMS.map((item) => ({
+    card_key: item.name.toLowerCase().replace(/\s+/g, '_'),
     card_name: item.name,
     viewed: statusMap[item.name].viewed ? 'viewed' : 'not viewed',
     analysed: statusMap[item.name].analysed ? 'analysed' : 'not analysed',
+    card_state: `${statusMap[item.name].viewed ? 'viewed' : 'not_viewed'}_${statusMap[item.name].analysed ? 'analysed' : 'not_analysed'}`,
   }));
+}
+
+function buildContextCardsByName() {
+  return Object.fromEntries(
+    TRACKED_ITEMS.map((item) => [
+      item.name,
+      {
+        viewed: statusMap[item.name].viewed ? 'viewed' : 'not viewed',
+        analysed: statusMap[item.name].analysed ? 'analysed' : 'not analysed',
+      },
+    ])
+  );
 }
 
 function emitScrollStoppedEvent() {
@@ -113,6 +127,7 @@ function emitScrollStoppedEvent() {
   trackTodayTabCartAnalysisScrollStopped({
     scroll_depth_pct: maxScrollDepthPct,
     context_cards: buildContextCardsPayload(),
+    context_cards_by_name: buildContextCardsByName(),
   });
 
   if (analysisTitle) analysisTitle.textContent = 'Scroll snapshot sent';

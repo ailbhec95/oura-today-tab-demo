@@ -29,9 +29,11 @@ function trackEvent(eventName, eventProperties = {}) {
 export function trackTodayTabCartAnalysisScrollStopped({
   scroll_depth_pct,
   context_cards,
+  context_cards_by_name,
 }) {
   trackEvent('Today Tab Cart Analysis Scroll Stopped', {
     scroll_depth_pct,
     context_cards,
+    context_cards_by_name,
   });
 }
