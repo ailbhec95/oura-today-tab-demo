@@ -16,24 +16,17 @@ export function initAnalytics() {
   initialized = true;
 }
 
-function trackEvent(eventName, eventProperties = {}) {
-  if (!initialized) return;
-  amplitude.track(eventName, eventProperties);
-}
-
 /**
- * Amplitude Cart Analysis–compatible event.
- * Enable property splitting on `context_cards` in Amplitude Data.
+ * Amplitude Cart Analysis format:
  * @see https://amplitude.com/docs/analytics/charts/cart-analysis
+ *
+ * amplitude.logEvent('Event Name', {
+ *   context_cards: [
+ *     { name: 'Sleep', viewed: 'viewed', analysed: 'not analysed' },
+ *   ],
+ * });
  */
-export function trackTodayTabCartAnalysisScrollStopped({
-  scroll_depth_pct,
-  context_cards,
-  context_cards_by_name,
-}) {
-  trackEvent('Today Tab Cart Analysis Scroll Stopped', {
-    scroll_depth_pct,
-    context_cards,
-    context_cards_by_name,
-  });
+export function trackTodayTabCartAnalysisScrollStopped(cartObjectArray) {
+  if (!initialized) return;
+  amplitude.logEvent('Today Tab Cart Analysis Scroll Stopped', cartObjectArray);
 }
