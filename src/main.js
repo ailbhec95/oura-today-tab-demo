@@ -100,25 +100,27 @@ function getCurrentScrollDepthPct() {
 }
 
 function buildCartPayload() {
+  const is_viewed = [];
+  const is_analysed = [];
+
+  TRACKED_ITEMS.forEach((item) => {
+    const status = statusMap[item.key];
+    if (status.viewed) is_viewed.push(String(item.key));
+    if (status.analysed) is_analysed.push(String(item.key));
+  });
+
   return {
     scroll_depth_pct: Number(maxScrollDepthPct),
-    today_tab_cards: TRACKED_ITEMS.map((item) => {
-      const status = statusMap[item.key];
-      return {
-        card_key: String(item.key),
-        card_name: String(item.name),
-        is_viewed: Boolean(status.viewed),
-        is_analysed: Boolean(status.analysed),
-      };
-    }),
+    is_viewed,
+    is_analysed,
   };
 }
 
 function showLastPayload(payload) {
   if (!analysisEmpty || !analysisContent) return;
 
-  analysisTitle.textContent = 'Cart Analysis payload sent';
-  analysisSubtitle.textContent = 'One event · 8 cards · fixed schema';
+  analysisTitle.textContent = 'Scroll payload sent';
+  analysisSubtitle.textContent = 'Card keys listed in is_viewed / is_analysed arrays';
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
@@ -128,13 +130,12 @@ function showLastPayload(payload) {
     </div>
     <div class="analysis-section">
       <h4>Filter per card in Amplitude</h4>
-      <p>Use <strong>parallel filters</strong> on the same event:</p>
+      <p>Example for Sleep:</p>
       <ul>
-        <li><code>today_tab_cards {:}.card_key</code> = <code>sleep</code></li>
-        <li><code>today_tab_cards {:}.is_viewed</code> is <code>true</code></li>
-        <li><code>today_tab_cards {:}.is_analysed</code> is <code>true</code></li>
+        <li><code>is_viewed</code> contains <code>sleep</code></li>
+        <li><code>is_analysed</code> contains <code>sleep</code></li>
       </ul>
-      <p>Group by <code>today_tab_cards {:}.card_name</code> to compare all cards.</p>
+      <p>Cards not viewed or analysed are simply omitted from the array.</p>
     </div>
   `;
 }

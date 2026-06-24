@@ -17,9 +17,8 @@ export function initAnalytics() {
 }
 
 /**
- * Single-event Cart Analysis payload.
- * Enable property splitting on `today_tab_cards` in Amplitude Data.
- * @see https://amplitude.com/docs/analytics/charts/cart-analysis
+ * Single scroll-stop event with card-key arrays:
+ * { is_viewed: ["sleep", "activity"], is_analysed: ["sleep"], scroll_depth_pct: 64 }
  */
 export function trackTodayTabScrollStopped(cartPayload) {
   if (!initialized) return;
