@@ -111,8 +111,10 @@ function buildCartPayload() {
 
   return {
     scroll_depth_pct: Number(maxScrollDepthPct),
-    is_viewed,
-    is_analysed,
+    card_status: {
+      viewed: is_viewed,
+      analysed: is_analysed,
+    },
   };
 }
 
@@ -120,7 +122,7 @@ function showLastPayload(payload) {
   if (!analysisEmpty || !analysisContent) return;
 
   analysisTitle.textContent = 'Scroll payload sent';
-  analysisSubtitle.textContent = 'Card keys listed in is_viewed / is_analysed arrays';
+  analysisSubtitle.textContent = 'Card keys in card_status.viewed / card_status.analysed';
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
@@ -132,8 +134,8 @@ function showLastPayload(payload) {
       <h4>Filter per card in Amplitude</h4>
       <p>Example for Sleep:</p>
       <ul>
-        <li><code>is_viewed</code> contains <code>sleep</code></li>
-        <li><code>is_analysed</code> contains <code>sleep</code></li>
+        <li><code>card_status.viewed</code> contains <code>sleep</code></li>
+        <li><code>card_status.analysed</code> contains <code>sleep</code></li>
       </ul>
       <p>Cards not viewed or analysed are simply omitted from the array.</p>
     </div>

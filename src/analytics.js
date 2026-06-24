@@ -18,7 +18,7 @@ export function initAnalytics() {
 
 /**
  * Single scroll-stop event with card-key arrays:
- * { is_viewed: ["sleep", "activity"], is_analysed: ["sleep"], scroll_depth_pct: 64 }
+ * { card_status: { viewed: ["sleep"], analysed: ["sleep"] }, scroll_depth_pct: 64 }
  */
 export function trackTodayTabScrollStopped(cartPayload) {
   if (!initialized) return;
