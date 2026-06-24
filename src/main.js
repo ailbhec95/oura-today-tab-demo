@@ -1,16 +1,14 @@
-import { initAnalytics, trackTodayTabScrollStopped } from './analytics.js';
+import { initAnalytics, trackTodayTabVisitEnded } from './analytics.js';
+import { TodayTabVisitTracker } from './todayVisit.js';
 
 const appContent = document.querySelector('.app-content');
 const shortcutsEl = document.querySelector('.shortcuts');
+const tabBar = document.querySelector('.tab-bar');
 const analysisTitle = document.getElementById('analysis-title');
 const analysisSubtitle = document.getElementById('analysis-subtitle');
 const analysisEmpty = document.getElementById('analysis-empty');
 const analysisContent = document.getElementById('analysis-content');
 
-const SCROLL_STOP_DEBOUNCE_MS = 700;
-const VISIBLE_RATIO_THRESHOLD = 0.25;
-
-// Fixed card catalog — every event always sends all 8 rows (required for Cart Analysis typing).
 const TRACKED_ITEMS = [
   { key: 'sleep', name: 'Sleep', selectors: ['[data-card="sleep"]', '[data-feature="sleep"]'] },
   { key: 'activity', name: 'Activity', selectors: ['[data-card="activity"]', '[data-feature="activity"]'] },
@@ -21,12 +19,6 @@ const TRACKED_ITEMS = [
   { key: 'readiness', name: 'Readiness', selectors: ['[data-feature="readiness"]'] },
   { key: 'timeline', name: 'Timeline', selectors: ['.timeline'] },
 ];
-
-const statusMap = Object.fromEntries(
-  TRACKED_ITEMS.map((item) => [item.key, { viewed: false, analysed: false }])
-);
-
-const trackedElements = [];
 
 const cardKeyToItemKey = {
   sleep: 'sleep',
@@ -45,182 +37,106 @@ const shortcutFeatureToItemKey = {
   'heart-rate': 'heart_rate',
 };
 
-let maxScrollDepthPct = 0;
-let scrollStopTimer;
+let activeTab = 'Today';
 
-function markViewed(itemKey) {
-  const status = statusMap[itemKey];
-  if (status) status.viewed = true;
-}
+const visitTracker = new TodayTabVisitTracker({
+  scrollContainer: appContent,
+  shortcutsContainer: shortcutsEl,
+  trackedItems: TRACKED_ITEMS,
+});
 
-function markAnalysed(itemKey) {
-  const status = statusMap[itemKey];
-  if (status) status.analysed = true;
-}
-
-function getVisibleRatio(element, container) {
-  const elementRect = element.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-
-  const overlapWidth =
-    Math.min(elementRect.right, containerRect.right) -
-    Math.max(elementRect.left, containerRect.left);
-  const overlapHeight =
-    Math.min(elementRect.bottom, containerRect.bottom) -
-    Math.max(elementRect.top, containerRect.top);
-
-  if (overlapWidth <= 0 || overlapHeight <= 0) return 0;
-
-  const visibleArea = overlapWidth * overlapHeight;
-  const elementArea = Math.max(elementRect.width * elementRect.height, 1);
-  return visibleArea / elementArea;
-}
-
-function getVisibilityContainer(element) {
-  if (element.closest('.shortcut')) return shortcutsEl ?? appContent;
-  return appContent;
-}
-
-function refreshViewedState() {
-  trackedElements.forEach(({ element, itemKey }) => {
-    const container = getVisibilityContainer(element);
-    if (!container) return;
-
-    const ratio = getVisibleRatio(element, container);
-    if (ratio >= VISIBLE_RATIO_THRESHOLD) {
-      markViewed(itemKey);
-    }
-  });
-}
-
-function getCurrentScrollDepthPct() {
-  if (!appContent) return 0;
-  const maxScrollable = Math.max(appContent.scrollHeight - appContent.clientHeight, 1);
-  return Math.round((appContent.scrollTop / maxScrollable) * 100);
-}
-
-function buildCartPayload() {
-  return {
-    scroll_depth_pct: Number(maxScrollDepthPct),
-    card_status: TRACKED_ITEMS.map((item) => {
-      const status = statusMap[item.key];
-      return {
-        card_key: String(item.key),
-        is_viewed: Boolean(status.viewed),
-        is_analysed: Boolean(status.analysed),
-      };
-    }),
-  };
-}
-
-function showLastPayload(payload) {
+function showVisitPayload(payload) {
   if (!analysisEmpty || !analysisContent) return;
 
-  analysisTitle.textContent = 'Scroll payload sent';
-  analysisSubtitle.textContent = 'One card_status array · 8 cards per event';
+  analysisTitle.textContent = 'Visit summary sent';
+  analysisSubtitle.textContent = `One event · ${payload.visit_duration_ms}ms on Today`;
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
     <div class="analysis-section">
-      <h4>Event: Today Tab Scroll Stopped</h4>
+      <h4>Event: Today Tab Visit Ended</h4>
       <pre style="font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);background:var(--surface-elevated);padding:12px;border-radius:8px;border:1px solid var(--border);">${JSON.stringify(payload, null, 2)}</pre>
     </div>
     <div class="analysis-section">
-      <h4>Filter per card in Amplitude (Cart Analysis)</h4>
-      <p>Enable splitting on <code>card_status</code>, then use parallel filters:</p>
+      <h4>What was captured</h4>
       <ul>
-        <li><code>card_status {:}.card_key</code> = <code>sleep</code></li>
-        <li><code>card_status {:}.is_viewed</code> is <code>true</code></li>
-        <li><code>card_status {:}.is_analysed</code> is <code>true</code></li>
+        <li>Scroll depth, scroll count, pixels scrolled</li>
+        <li>Dwell time per context card</li>
+        <li>Viewed / analysed state per card</li>
       </ul>
-      <p>Group by <code>card_status {:}.card_key</code> to compare cards.</p>
     </div>
   `;
 }
 
-function emitScrollStoppedEvent() {
-  refreshViewedState();
-
-  const payload = buildCartPayload();
-  trackTodayTabScrollStopped(payload);
-  showLastPayload(payload);
+function endTodayVisit(exitDestination) {
+  const payload = visitTracker.buildVisitPayload(exitDestination);
+  trackTodayTabVisitEnded(payload);
+  showVisitPayload(payload);
 }
 
-function scheduleScrollStoppedEvent() {
-  clearTimeout(scrollStopTimer);
-  scrollStopTimer = setTimeout(emitScrollStoppedEvent, SCROLL_STOP_DEBOUNCE_MS);
+function resetAnalysisPanel() {
+  analysisTitle.textContent = 'Browse the Today tab';
+  analysisSubtitle.textContent = 'One analytics event fires when you leave Today';
+  analysisEmpty.hidden = false;
+  analysisContent.hidden = true;
 }
 
-function registerTrackedElements() {
-  TRACKED_ITEMS.forEach((item) => {
-    item.selectors.forEach((selector) => {
-      document.querySelectorAll(selector).forEach((element) => {
-        trackedElements.push({ element, itemKey: item.key });
-      });
-    });
+function switchTab(tabName) {
+  if (tabName === activeTab) return;
+
+  tabBar.querySelectorAll('.tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
   });
+
+  if (activeTab === 'Today' && tabName !== 'Today') {
+    endTodayVisit(tabName);
+  }
+
+  if (tabName === 'Today') {
+    visitTracker.reset();
+    resetAnalysisPanel();
+  }
+
+  activeTab = tabName;
 }
 
-function setupAnalysisInteractions() {
+function bindInteractions() {
   document.querySelectorAll('.card').forEach((card) => {
     const itemKey = cardKeyToItemKey[card.dataset.card];
     if (!itemKey) return;
 
-    const markCardAnalysed = () => {
-      markViewed(itemKey);
-      markAnalysed(itemKey);
+    const markAnalysed = () => {
+      visitTracker.markViewed(itemKey);
+      visitTracker.markAnalysed(itemKey);
     };
 
-    card.addEventListener('click', markCardAnalysed);
-    card.querySelector('.analyze-btn')?.addEventListener('click', (event) => {
-      event.stopPropagation();
-      markCardAnalysed();
+    card.addEventListener('click', markAnalysed);
+    card.querySelector('.analyze-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      markAnalysed();
     });
   });
 
   document.querySelectorAll('.shortcut').forEach((shortcut) => {
-    const feature = shortcut.dataset.feature;
-    const itemKey = shortcutFeatureToItemKey[feature];
+    const itemKey = shortcutFeatureToItemKey[shortcut.dataset.feature];
     if (!itemKey) return;
-
     shortcut.addEventListener('click', () => {
-      markViewed(itemKey);
-      markAnalysed(itemKey);
+      visitTracker.markViewed(itemKey);
+      visitTracker.markAnalysed(itemKey);
     });
   });
 
   document.querySelector('.timeline')?.addEventListener('click', () => {
-    markViewed('timeline');
-    markAnalysed('timeline');
+    visitTracker.markViewed('timeline');
+    visitTracker.markAnalysed('timeline');
+  });
+
+  tabBar.querySelectorAll('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 }
 
-function setupScrollStopTracking() {
-  if (appContent) {
-    appContent.addEventListener(
-      'scroll',
-      () => {
-        maxScrollDepthPct = Math.max(maxScrollDepthPct, getCurrentScrollDepthPct());
-        scheduleScrollStoppedEvent();
-      },
-      { passive: true }
-    );
-  }
-
-  if (shortcutsEl) {
-    shortcutsEl.addEventListener(
-      'scroll',
-      () => {
-        refreshViewedState();
-        scheduleScrollStoppedEvent();
-      },
-      { passive: true }
-    );
-  }
-}
-
 initAnalytics();
-registerTrackedElements();
-setupAnalysisInteractions();
-setupScrollStopTracking();
-requestAnimationFrame(refreshViewedState);
+visitTracker.start();
+bindInteractions();
+resetAnalysisPanel();

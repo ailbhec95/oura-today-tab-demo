@@ -6,9 +6,7 @@ let initialized = false;
 
 export function initAnalytics() {
   if (initialized || !API_KEY) {
-    if (!API_KEY) {
-      console.warn('[Amplitude] Missing VITE_AMPLITUDE_API_KEY');
-    }
+    if (!API_KEY) console.warn('[Amplitude] Missing VITE_AMPLITUDE_API_KEY');
     return;
   }
 
@@ -16,11 +14,8 @@ export function initAnalytics() {
   initialized = true;
 }
 
-/**
- * Single scroll-stop event with card-key arrays:
- * { card_status: [{ card_key: "sleep", is_viewed: true, is_analysed: true }, ...], scroll_depth_pct: 64 }
- */
-export function trackTodayTabScrollStopped(cartPayload) {
+/** One event per Today tab visit — fired when the user leaves Today. */
+export function trackTodayTabVisitEnded(payload) {
   if (!initialized) return;
-  amplitude.logEvent('Today Tab Scroll Stopped', cartPayload);
+  amplitude.logEvent('Today Tab Visit Ended', payload);
 }
