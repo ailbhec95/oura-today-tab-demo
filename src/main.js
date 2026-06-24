@@ -100,21 +100,16 @@ function getCurrentScrollDepthPct() {
 }
 
 function buildCartPayload() {
-  const is_viewed = [];
-  const is_analysed = [];
-
-  TRACKED_ITEMS.forEach((item) => {
-    const status = statusMap[item.key];
-    if (status.viewed) is_viewed.push(String(item.key));
-    if (status.analysed) is_analysed.push(String(item.key));
-  });
-
   return {
     scroll_depth_pct: Number(maxScrollDepthPct),
-    card_status: {
-      viewed: is_viewed,
-      analysed: is_analysed,
-    },
+    card_status: TRACKED_ITEMS.map((item) => {
+      const status = statusMap[item.key];
+      return {
+        card_key: String(item.key),
+        is_viewed: Boolean(status.viewed),
+        is_analysed: Boolean(status.analysed),
+      };
+    }),
   };
 }
 
@@ -122,7 +117,7 @@ function showLastPayload(payload) {
   if (!analysisEmpty || !analysisContent) return;
 
   analysisTitle.textContent = 'Scroll payload sent';
-  analysisSubtitle.textContent = 'Card keys in card_status.viewed / card_status.analysed';
+  analysisSubtitle.textContent = 'One card_status array · 8 cards per event';
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
@@ -131,13 +126,14 @@ function showLastPayload(payload) {
       <pre style="font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);background:var(--surface-elevated);padding:12px;border-radius:8px;border:1px solid var(--border);">${JSON.stringify(payload, null, 2)}</pre>
     </div>
     <div class="analysis-section">
-      <h4>Filter per card in Amplitude</h4>
-      <p>Example for Sleep:</p>
+      <h4>Filter per card in Amplitude (Cart Analysis)</h4>
+      <p>Enable splitting on <code>card_status</code>, then use parallel filters:</p>
       <ul>
-        <li><code>card_status.viewed</code> contains <code>sleep</code></li>
-        <li><code>card_status.analysed</code> contains <code>sleep</code></li>
+        <li><code>card_status {:}.card_key</code> = <code>sleep</code></li>
+        <li><code>card_status {:}.is_viewed</code> is <code>true</code></li>
+        <li><code>card_status {:}.is_analysed</code> is <code>true</code></li>
       </ul>
-      <p>Cards not viewed or analysed are simply omitted from the array.</p>
+      <p>Group by <code>card_status {:}.card_key</code> to compare cards.</p>
     </div>
   `;
 }
