@@ -17,16 +17,11 @@ export function initAnalytics() {
 }
 
 /**
- * Amplitude Cart Analysis format:
+ * Single-event Cart Analysis payload.
+ * Enable property splitting on `today_tab_cards` in Amplitude Data.
  * @see https://amplitude.com/docs/analytics/charts/cart-analysis
- *
- * amplitude.logEvent('Event Name', {
- *   today_tab_cards: [
- *     { card_id: 1, card_name: 'Sleep', is_viewed: true, is_analysed: false },
- *   ],
- * });
  */
-export function trackTodayTabCartAnalysisScrollStopped(cartObjectArray) {
+export function trackTodayTabScrollStopped(cartPayload) {
   if (!initialized) return;
-  amplitude.logEvent('Today Tab Cart Analysis Scroll Stopped', cartObjectArray);
+  amplitude.logEvent('Today Tab Scroll Stopped', cartPayload);
 }

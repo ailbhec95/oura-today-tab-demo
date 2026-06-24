@@ -1,7 +1,4 @@
-import {
-  initAnalytics,
-  trackTodayTabCartAnalysisScrollStopped,
-} from './analytics.js';
+import { initAnalytics, trackTodayTabScrollStopped } from './analytics.js';
 
 const appContent = document.querySelector('.app-content');
 const shortcutsEl = document.querySelector('.shortcuts');
@@ -13,50 +10,51 @@ const analysisContent = document.getElementById('analysis-content');
 const SCROLL_STOP_DEBOUNCE_MS = 700;
 const VISIBLE_RATIO_THRESHOLD = 0.25;
 
+// Fixed card catalog — every event always sends all 8 rows (required for Cart Analysis typing).
 const TRACKED_ITEMS = [
-  { id: 1, name: 'Sleep', selectors: ['[data-card="sleep"]', '[data-feature="sleep"]'] },
-  { id: 2, name: 'Activity', selectors: ['[data-card="activity"]', '[data-feature="activity"]'] },
-  { id: 3, name: 'Daytime Stress', selectors: ['[data-card="stress"]', '[data-feature="daytime-stress"]'] },
-  { id: 4, name: 'Resilience', selectors: ['[data-feature="resilience"]'] },
-  { id: 5, name: 'Cycle Insights', selectors: ['[data-feature="cycle-insights"]'] },
-  { id: 6, name: 'Heart Rate', selectors: ['[data-feature="heart-rate"]', '[data-card="heart"]'] },
-  { id: 7, name: 'Readiness', selectors: ['[data-feature="readiness"]'] },
-  { id: 8, name: 'Timeline', selectors: ['.timeline'] },
+  { key: 'sleep', name: 'Sleep', selectors: ['[data-card="sleep"]', '[data-feature="sleep"]'] },
+  { key: 'activity', name: 'Activity', selectors: ['[data-card="activity"]', '[data-feature="activity"]'] },
+  { key: 'daytime_stress', name: 'Daytime Stress', selectors: ['[data-card="stress"]', '[data-feature="daytime-stress"]'] },
+  { key: 'resilience', name: 'Resilience', selectors: ['[data-feature="resilience"]'] },
+  { key: 'cycle_insights', name: 'Cycle Insights', selectors: ['[data-feature="cycle-insights"]'] },
+  { key: 'heart_rate', name: 'Heart Rate', selectors: ['[data-feature="heart-rate"]', '[data-card="heart"]'] },
+  { key: 'readiness', name: 'Readiness', selectors: ['[data-feature="readiness"]'] },
+  { key: 'timeline', name: 'Timeline', selectors: ['.timeline'] },
 ];
 
 const statusMap = Object.fromEntries(
-  TRACKED_ITEMS.map((item) => [item.name, { viewed: false, analysed: false }])
+  TRACKED_ITEMS.map((item) => [item.key, { viewed: false, analysed: false }])
 );
 
 const trackedElements = [];
 
-const cardKeyToItem = {
-  sleep: 'Sleep',
-  activity: 'Activity',
-  stress: 'Daytime Stress',
-  heart: 'Heart Rate',
+const cardKeyToItemKey = {
+  sleep: 'sleep',
+  activity: 'activity',
+  stress: 'daytime_stress',
+  heart: 'heart_rate',
 };
 
-const shortcutFeatureToItem = {
-  readiness: 'Readiness',
-  sleep: 'Sleep',
-  activity: 'Activity',
-  'daytime-stress': 'Daytime Stress',
-  'cycle-insights': 'Cycle Insights',
-  resilience: 'Resilience',
-  'heart-rate': 'Heart Rate',
+const shortcutFeatureToItemKey = {
+  readiness: 'readiness',
+  sleep: 'sleep',
+  activity: 'activity',
+  'daytime-stress': 'daytime_stress',
+  'cycle-insights': 'cycle_insights',
+  resilience: 'resilience',
+  'heart-rate': 'heart_rate',
 };
 
 let maxScrollDepthPct = 0;
 let scrollStopTimer;
 
-function markViewed(itemName) {
-  const status = statusMap[itemName];
+function markViewed(itemKey) {
+  const status = statusMap[itemKey];
   if (status) status.viewed = true;
 }
 
-function markAnalysed(itemName) {
-  const status = statusMap[itemName];
+function markAnalysed(itemKey) {
+  const status = statusMap[itemKey];
   if (status) status.analysed = true;
 }
 
@@ -84,13 +82,13 @@ function getVisibilityContainer(element) {
 }
 
 function refreshViewedState() {
-  trackedElements.forEach(({ element, itemName }) => {
+  trackedElements.forEach(({ element, itemKey }) => {
     const container = getVisibilityContainer(element);
     if (!container) return;
 
     const ratio = getVisibleRatio(element, container);
     if (ratio >= VISIBLE_RATIO_THRESHOLD) {
-      markViewed(itemName);
+      markViewed(itemKey);
     }
   });
 }
@@ -101,36 +99,42 @@ function getCurrentScrollDepthPct() {
   return Math.round((appContent.scrollTop / maxScrollable) * 100);
 }
 
-function buildCartObjectArray() {
+function buildCartPayload() {
   return {
-    today_tab_cards: TRACKED_ITEMS.map((item) => ({
-      card_id: Number(item.id),
-      card_name: String(item.name),
-      is_viewed: Boolean(statusMap[item.name].viewed),
-      is_analysed: Boolean(statusMap[item.name].analysed),
-    })),
     scroll_depth_pct: Number(maxScrollDepthPct),
+    today_tab_cards: TRACKED_ITEMS.map((item) => {
+      const status = statusMap[item.key];
+      return {
+        card_key: String(item.key),
+        card_name: String(item.name),
+        is_viewed: Boolean(status.viewed),
+        is_analysed: Boolean(status.analysed),
+      };
+    }),
   };
 }
 
 function showLastPayload(payload) {
   if (!analysisEmpty || !analysisContent) return;
 
-  analysisTitle.textContent = 'Cart payload sent';
-  analysisSubtitle.textContent = 'Full event properties object (not just the array)';
+  analysisTitle.textContent = 'Cart Analysis payload sent';
+  analysisSubtitle.textContent = 'One event · 8 cards · fixed schema';
   analysisEmpty.hidden = true;
   analysisContent.hidden = false;
   analysisContent.innerHTML = `
     <div class="analysis-section">
-      <h4>Event sent to Amplitude</h4>
-      <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px;">
-        Today Tab Cart Analysis Scroll Stopped
-      </p>
+      <h4>Event: Today Tab Scroll Stopped</h4>
       <pre style="font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:var(--text-secondary);background:var(--surface-elevated);padding:12px;border-radius:8px;border:1px solid var(--border);">${JSON.stringify(payload, null, 2)}</pre>
     </div>
     <div class="analysis-section">
-      <h4>Child properties in charts</h4>
-      <p>After property splitting in Amplitude Data, use <strong>today_tab_cards {:}.card_name</strong>, <strong>today_tab_cards {:}.is_viewed</strong>, and <strong>today_tab_cards {:}.is_analysed</strong> in Event Segmentation.</p>
+      <h4>Filter per card in Amplitude</h4>
+      <p>Use <strong>parallel filters</strong> on the same event:</p>
+      <ul>
+        <li><code>today_tab_cards {:}.card_key</code> = <code>sleep</code></li>
+        <li><code>today_tab_cards {:}.is_viewed</code> is <code>true</code></li>
+        <li><code>today_tab_cards {:}.is_analysed</code> is <code>true</code></li>
+      </ul>
+      <p>Group by <code>today_tab_cards {:}.card_name</code> to compare all cards.</p>
     </div>
   `;
 }
@@ -138,8 +142,8 @@ function showLastPayload(payload) {
 function emitScrollStoppedEvent() {
   refreshViewedState();
 
-  const payload = buildCartObjectArray();
-  trackTodayTabCartAnalysisScrollStopped(payload);
+  const payload = buildCartPayload();
+  trackTodayTabScrollStopped(payload);
   showLastPayload(payload);
 }
 
@@ -152,7 +156,7 @@ function registerTrackedElements() {
   TRACKED_ITEMS.forEach((item) => {
     item.selectors.forEach((selector) => {
       document.querySelectorAll(selector).forEach((element) => {
-        trackedElements.push({ element, itemName: item.name });
+        trackedElements.push({ element, itemKey: item.key });
       });
     });
   });
@@ -160,12 +164,12 @@ function registerTrackedElements() {
 
 function setupAnalysisInteractions() {
   document.querySelectorAll('.card').forEach((card) => {
-    const itemName = cardKeyToItem[card.dataset.card];
-    if (!itemName) return;
+    const itemKey = cardKeyToItemKey[card.dataset.card];
+    if (!itemKey) return;
 
     const markCardAnalysed = () => {
-      markViewed(itemName);
-      markAnalysed(itemName);
+      markViewed(itemKey);
+      markAnalysed(itemKey);
     };
 
     card.addEventListener('click', markCardAnalysed);
@@ -177,18 +181,18 @@ function setupAnalysisInteractions() {
 
   document.querySelectorAll('.shortcut').forEach((shortcut) => {
     const feature = shortcut.dataset.feature;
-    const itemName = shortcutFeatureToItem[feature];
-    if (!itemName) return;
+    const itemKey = shortcutFeatureToItemKey[feature];
+    if (!itemKey) return;
 
     shortcut.addEventListener('click', () => {
-      markViewed(itemName);
-      markAnalysed(itemName);
+      markViewed(itemKey);
+      markAnalysed(itemKey);
     });
   });
 
   document.querySelector('.timeline')?.addEventListener('click', () => {
-    markViewed('Timeline');
-    markAnalysed('Timeline');
+    markViewed('timeline');
+    markAnalysed('timeline');
   });
 }
 
