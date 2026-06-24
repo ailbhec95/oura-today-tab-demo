@@ -60,9 +60,9 @@ function showVisitPayload(payload) {
     <div class="analysis-section">
       <h4>What was captured</h4>
       <ul>
+        <li><code>card_dwell</code> — object array for avg dwell per card (Cart Analysis)</li>
+        <li><code>cards_viewed</code> / <code>cards_analysed</code> — string arrays for filters</li>
         <li>Scroll depth, scroll count, pixels scrolled</li>
-        <li>Dwell time per context card</li>
-        <li>Viewed / analysed state per card</li>
       </ul>
     </div>
   `;

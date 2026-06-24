@@ -190,20 +190,23 @@ export class TodayTabVisitTracker {
   buildVisitPayload(exitDestination) {
     this.finalizeAllDwell();
 
-    const context_cards = this.trackedItems.map((item) => {
+    const cards_viewed = [];
+    const cards_analysed = [];
+    const card_dwell = [];
+
+    this.trackedItems.forEach((item) => {
       const state = this.cardState[item.key];
-      return {
-        card_key: String(state.card_key),
-        card_name: String(state.card_name),
-        dwell_ms: Number(state.dwell_ms),
-        max_visible_pct: Number(state.max_visible_pct),
-        impressions: Number(state.impressions),
-        is_viewed: Boolean(state.is_viewed),
-        is_analysed: Boolean(state.is_analysed),
-      };
+      if (state.is_viewed) cards_viewed.push(String(state.card_key));
+      if (state.is_analysed) cards_analysed.push(String(state.card_key));
+      if (state.dwell_ms > 0) {
+        card_dwell.push({
+          card_key: String(state.card_key),
+          dwell_ms: Number(state.dwell_ms),
+        });
+      }
     });
 
-    const primary = [...context_cards].sort((a, b) => b.dwell_ms - a.dwell_ms)[0];
+    card_dwell.sort((a, b) => b.dwell_ms - a.dwell_ms);
 
     return {
       exit_destination: String(exitDestination),
@@ -211,10 +214,12 @@ export class TodayTabVisitTracker {
       scroll_max_depth_pct: Number(this.maxScrollDepthPct),
       scroll_event_count: Number(this.scrollEventCount),
       total_scroll_px: Number(Math.round(this.totalScrollPx)),
-      cards_viewed_count: Number(context_cards.filter((c) => c.is_viewed).length),
-      cards_analysed_count: Number(context_cards.filter((c) => c.is_analysed).length),
-      primary_card_key: primary?.card_key ?? null,
-      context_cards,
+      cards_viewed,
+      cards_analysed,
+      cards_viewed_count: Number(cards_viewed.length),
+      cards_analysed_count: Number(cards_analysed.length),
+      primary_card_key: card_dwell[0]?.card_key ?? null,
+      card_dwell,
     };
   }
 }

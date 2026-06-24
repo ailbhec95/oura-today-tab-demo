@@ -21,38 +21,31 @@ Deployed automatically from `main` via GitHub Pages.
 
 | Event | When |
 |-------|------|
-| `Demo Viewed` | Page load |
-| `Today Tab Entered` | User returns to Today |
-| `Today Tab Scrolled` | User scrolls (debounced, includes depth %) |
-| `Context Card Dwelling` | Card dwelled ≥2s (also in session payload) |
-| **`Today Tab Card Analysis`** | **User leaves Today** — Cart Analysis payload |
-| `Shortcut Tapped` | Score shortcut tapped |
-| `Tab Tapped` | Bottom tab tapped |
+| **`Today Tab Visit Ended`** | **User leaves Today** — one event per visit |
 
-### Cart Analysis setup
-
-The leave-tab event sends a `context_cards` **object array** (one object per context card with dwell, visibility, taps). Enable [property splitting](https://amplitude.com/docs/analytics/charts/cart-analysis) on `context_cards` in **Amplitude Data** to analyze cards in Event Segmentation and Funnels.
-
-Example payload:
+### Payload shape
 
 ```json
 {
-  "exit_tab": "Vitals",
-  "session_duration_ms": 42000,
+  "exit_destination": "Vitals",
+  "visit_duration_ms": 42000,
   "scroll_max_depth_pct": 78,
-  "context_cards": [
-    {
-      "card_type": "sleep",
-      "card_title": "Excellent sleep last night",
-      "dwell_ms": 5200,
-      "max_visible_pct": 100,
-      "impressions": 2,
-      "was_tapped": true,
-      "tap_count": 1
-    }
+  "scroll_event_count": 12,
+  "total_scroll_px": 420,
+  "cards_viewed": ["sleep", "activity", "readiness"],
+  "cards_analysed": ["sleep"],
+  "cards_viewed_count": 3,
+  "cards_analysed_count": 1,
+  "primary_card_key": "sleep",
+  "card_dwell": [
+    { "card_key": "sleep", "dwell_ms": 5200 },
+    { "card_key": "activity", "dwell_ms": 1200 }
   ]
 }
 ```
+
+- **`cards_viewed` / `cards_analysed`** — string arrays; filter with **contains** (e.g. viewed Sleep but didn't analyse).
+- **`card_dwell`** — object array; only cards with meaningful dwell (`> 0`). Enable [property splitting](https://amplitude.com/docs/analytics/charts/cart-analysis) on `card_dwell` in **Amplitude Data**, then group by `card_dwell {:}.card_key` and average `card_dwell {:}.dwell_ms` for avg dwell per card.
 
 ## Configuration
 
